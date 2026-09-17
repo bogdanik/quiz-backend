@@ -1,5 +1,3 @@
 flask
 flask-socketio
-gevent
-gevent-websocket
-gunicorn
+eventlet==0.35.2
