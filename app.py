@@ -28,6 +28,8 @@ def handle_disconnect():
     if sid in game_state["players"]:
         del game_state["players"][sid]
         broadcast_lobby()
+        if game_state["status"] == "QUESTION":
+            check_all_answered()
     if sid == game_state["admin_sid"]:
         game_state["admin_sid"] = None
     print(f"Отключение: {sid}")
@@ -53,6 +55,8 @@ def handle_login(data):
         game_state["players"][sid] = {"name": name, "score": 0, "answered": False, "is_admin": False}
         emit('login_response', {'success': True, 'is_admin': False})
         broadcast_lobby()
+        if game_state["status"] == "QUESTION":
+            check_all_answered()
 
     else:
         emit('login_response', {'success': False, 'message': 'Неверный пароль!'})
@@ -79,6 +83,7 @@ def handle_start_question():
     game_state["status"] = "QUESTION"
     game_state["q_start_time"] = time.time()
     
+    # Сбрасываем флаг ответа у всех участников для нового вопроса
     for p in game_state["players"].values():
         p["answered"] = False
 
@@ -87,6 +92,9 @@ def handle_start_question():
         'total_q': TOTAL_QUESTIONS,
         'timer': 30
     })
+
+    # Сразу мгновенно сбрасываем счетчик на экранах: "Ответили: 0 из N"
+    check_all_answered()
 
 # --- 3. ПРИЕМ ФЛАГА И РАСЧЕТ БАЛЛОВ ---
 @socketio.on('submit_answer')
@@ -128,7 +136,13 @@ def check_all_answered():
 def handle_next_round():
     if request.sid != game_state["admin_sid"]:
         return
-    game_state["current_q_index"] += 1
+
+    # ФИКС: Если старт происходит из ЛОББИ — запускаем вопрос №1 (индекс 0), иначе прибавляем +1
+    if game_state["status"] == "LOBBY":
+        game_state["current_q_index"] = 0
+    else:
+        game_state["current_q_index"] += 1
+
     handle_start_question()
 
 # --- 4. ЗАВЕРШЕНИЕ СЕССИИ И ОПРЕДЕЛЕНИЕ ПОБЕДИТЕЛЯ ---
@@ -137,17 +151,14 @@ def handle_end_session():
     if request.sid != game_state["admin_sid"]:
         return
     
-    # Находим имя победителя (игрока с максимальными баллами)
     winner_name = "Все гости"
     non_admin_players = [p for p in game_state["players"].values() if not p.get("is_admin")]
     if non_admin_players:
         winner = max(non_admin_players, key=lambda x: x["score"])
         winner_name = winner["name"]
 
-    # Отправляем всем сообщение с именем победителя
     socketio.emit('session_ended', {'winner_name': winner_name})
 
-    # Сброс состояния игры
     game_state["status"] = "LOBBY"
     game_state["current_q_index"] = 0
     game_state["q_start_time"] = 0
