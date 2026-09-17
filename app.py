@@ -1,3 +1,4 @@
+import os
 import time
 from flask import Flask, request
 from flask_socketio import SocketIO, emit
@@ -12,26 +13,26 @@ QUESTIONS = [
         "id": 1,
         "text": "Сколько спутников у Юпитера (по данным на 2026 год)?",
         "options": ["79", "95", "12", "48"],
-        "correct": 1 # Индекс правильного ответа (95)
+        "correct": 1  # Индекс правильного ответа (95)
     },
     {
         "id": 2,
         "text": "Какой язык программирования мы используем для бэкенда?",
         "options": ["PHP", "JavaScript", "Python", "C++"],
-        "correct": 2 # Python
+        "correct": 2  # Python
     }
 ]
 
 # --- СОСТОЯНИЕ ИГРЫ (GAME STATE) ---
 game_state = {
-    "status": "LOBBY", # LOBBY, QUESTION, PAUSE, FINISHED
+    "status": "LOBBY",  # LOBBY, QUESTION, PAUSE, FINISHED
     "current_q_index": 0,
     "q_start_time": 0,
-    "players": {}, # { socket_id: {"name": "Имя", "score": 0, "answered": False} }
+    "players": {},  # { socket_id: {"name": "Имя", "score": 0, "answered": False, "is_admin": False} }
     "admin_sid": None
 }
 
-# --- ПОДДКЛЮЧЕНИЕ / ОТКЛЮЧЕНИЕ ---
+# --- ПОДКЛЮЧЕНИЕ / ОТКЛЮЧЕНИЕ ---
 @socketio.on('connect')
 def handle_connect():
     print(f"Новое подключение: {request.sid}")
@@ -82,7 +83,7 @@ def broadcast_lobby():
 @socketio.on('admin_start_question')
 def handle_start_question():
     if request.sid != game_state["admin_sid"]:
-        return # Игнорируем, если жмет не админ
+        return  # Игнорируем, если жмет не админ
 
     idx = game_state["current_q_index"]
     if idx >= len(QUESTIONS):
@@ -120,8 +121,8 @@ def handle_submit_answer(data):
 
     selected_option = data.get('option_index')
     now = time.time()
-    time_taken = now - game_state["q_start_time"] # За сколько секунд ответил
-    time_left = max(0, 30 - time_taken) # Сколько секунд оставалось (из 30)
+    time_taken = now - game_state["q_start_time"]  # За сколько секунд ответил
+    time_left = max(0, 30 - time_taken)  # Сколько секунд оставалось (из 30)
 
     player["answered"] = True
     
@@ -172,5 +173,6 @@ def send_final_results():
     socketio.emit('show_results', {'leaderboard': leaderboard})
 
 if __name__ == '__main__':
-    # Запуск сервера локально на порту 5000
-    socketio.run(app, host='0.0.0.0', port=5000, debug=True)
+    # Автоматически считываем порт от Render (переменная PORT) или ставим 5000 по умолчанию
+    port = int(os.environ.get('PORT', 5000))
+    socketio.run(app, host='0.0.0.0', port=port)
