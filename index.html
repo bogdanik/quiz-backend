@@ -487,10 +487,10 @@
                 </ul>
             </div>
 
-            <!-- Секретный блок пароля (открывается тройным кликом по заголовку) -->
+            <!-- Секретное поле ввода ПИН-кода -->
             <div id="secret-admin-box" class="secret-admin-modal">
-                <p style="color: var(--gold-main); font-size: 0.85rem; font-weight: 700; margin-bottom: 8px;">🔑 Введите пароль доступа</p>
-                <input type="password" id="input-code" class="custom-input" placeholder="Пароль (например: бог)" value="" style="margin-bottom: 0;" autocomplete="off" autocorrect="off" autocapitalize="none">
+                <p style="color: var(--gold-main); font-size: 0.85rem; font-weight: 700; margin-bottom: 8px;">🔑 Введите ПИН-код спец-режима</p>
+                <input type="password" id="input-code" class="custom-input" placeholder="ПИН-код" value="" style="margin-bottom: 0;" autocomplete="off" autocorrect="off" autocapitalize="none">
             </div>
 
             <input type="text" id="input-name" class="custom-input" placeholder="Введите ваше имя" autocomplete="off" autocorrect="off" autocapitalize="words">
@@ -546,7 +546,7 @@
         </div>
     </div>
 
-    <!-- ПАНЕЛЬ ВЕДУЩЕГО (По умолчанию «Запустить квиз») -->
+    <!-- ПАНЕЛЬ ВЕДУЩЕГО -->
     <div id="admin-panel" class="admin-panel">
         <div class="admin-panel-content">
             <button id="admin-action-btn" class="btn-next" onclick="adminNextAction()">🚀 Запустить квиз</button>
@@ -674,7 +674,6 @@
             }
         ];
 
-        // Тройной клик / тап по заголовку открывает секретное поле ввода пароля
         const mainTitle = document.getElementById('main-title');
         const handleTitleTap = () => {
             titleClickCount++;
