@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Свадебный Квиз: Максим & Екатерина</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -31,6 +31,7 @@
             padding: 0;
             font-family: 'Plus Jakarta Sans', sans-serif;
             -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
         }
 
         body {
@@ -41,6 +42,7 @@
             align-items: center;
             justify-content: center;
             padding: 16px;
+            padding-bottom: max(20px, env(safe-area-inset-bottom));
             overflow-x: hidden;
             position: relative;
             color: var(--text-light);
@@ -86,7 +88,7 @@
             backdrop-filter: blur(30px) saturate(200%);
             -webkit-backdrop-filter: blur(30px) saturate(200%);
             border: 1px solid var(--glass-border);
-            padding: 32px 26px;
+            padding: 28px 20px;
             border-radius: 28px;
             box-shadow: 
                 0 30px 70px rgba(0, 0, 0, 0.9),
@@ -98,7 +100,6 @@
             transition: max-width 0.4s ease;
         }
 
-        /* Адаптация под БОЛЬШОЙ ЭКРАН / ПРОЕКТОР */
         body.is-screen-mode .container {
             max-width: 1000px;
             padding: 48px 40px;
@@ -133,7 +134,7 @@
 
         .gold-title {
             font-family: 'Cinzel', serif;
-            font-size: 2.2rem;
+            font-size: 2rem;
             font-weight: 900;
             background: linear-gradient(135deg, #ffffff 0%, var(--gold-light) 25%, var(--gold-main) 65%, var(--gold-dark) 100%);
             -webkit-background-clip: text;
@@ -171,19 +172,19 @@
         .rules-box {
             background: linear-gradient(135deg, rgba(15, 23, 42, 0.7), rgba(30, 41, 59, 0.7));
             border: 1px solid rgba(245, 158, 11, 0.35);
-            padding: 20px;
+            padding: 18px;
             border-radius: 18px;
             text-align: left;
-            margin-bottom: 24px;
+            margin-bottom: 20px;
             box-shadow: 0 10px 25px rgba(0,0,0,0.4);
         }
 
         .rules-box-title {
             font-family: 'Cinzel', serif;
             color: var(--gold-light);
-            font-size: 1.15rem;
+            font-size: 1.1rem;
             font-weight: 700;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
             display: flex;
             align-items: center;
             gap: 8px;
@@ -196,11 +197,11 @@
 
         .rules-box li {
             position: relative;
-            padding-left: 26px;
-            margin-bottom: 10px;
+            padding-left: 24px;
+            margin-bottom: 8px;
             color: #cbd5e1;
-            font-size: 0.95rem;
-            line-height: 1.45;
+            font-size: 0.9rem;
+            line-height: 1.4;
         }
 
         .rules-box li::before {
@@ -208,7 +209,7 @@
             position: absolute;
             left: 0;
             color: var(--gold-main);
-            font-size: 1.1rem;
+            font-size: 1rem;
         }
 
         .warning-text {
@@ -218,13 +219,13 @@
 
         input.custom-input {
             width: 100%;
-            padding: 18px 20px;
-            margin-bottom: 16px;
+            padding: 16px 18px;
+            margin-bottom: 14px;
             border-radius: 16px;
             border: 1px solid var(--glass-border);
             background: rgba(3, 7, 18, 0.7);
             color: #ffffff;
-            font-size: 1.1rem;
+            font-size: 1rem;
             font-weight: 600;
             outline: none;
             transition: all 0.25s ease;
@@ -239,13 +240,13 @@
 
         button.btn-gold {
             width: 100%;
-            padding: 18px;
+            padding: 16px;
             background: linear-gradient(135deg, var(--gold-light) 0%, var(--gold-main) 50%, var(--gold-dark) 100%);
             color: #030712;
             font-weight: 800;
             border: none;
             border-radius: 16px;
-            font-size: 1.1rem;
+            font-size: 1.05rem;
             letter-spacing: 0.5px;
             cursor: pointer;
             box-shadow: 0 12px 30px var(--gold-glow);
@@ -293,20 +294,20 @@
         .options-grid {
             display: flex;
             flex-direction: column;
-            gap: 14px;
-            margin-top: 20px;
+            gap: 12px;
+            margin-top: 18px;
         }
 
         .btn-option {
             background: linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.7));
             border: 1px solid var(--glass-border);
             color: #ffffff;
-            padding: 20px 22px;
+            padding: 18px 20px;
             border-radius: 16px;
-            font-size: 1.05rem;
+            font-size: 1rem;
             font-weight: 500;
             text-align: left;
-            line-height: 1.5;
+            line-height: 1.45;
             cursor: pointer;
             transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
             backdrop-filter: blur(10px);
@@ -316,7 +317,7 @@
         .btn-option:hover:not(:disabled) {
             background: rgba(51, 65, 85, 0.85);
             border-color: var(--gold-main);
-            transform: translate3d(0, -3px, 0);
+            transform: translate3d(0, -2px, 0);
             box-shadow: 0 12px 25px rgba(0,0,0,0.5), 0 0 15px var(--gold-glow);
         }
 
@@ -344,7 +345,7 @@
             background: rgba(3, 7, 18, 0.9);
             border-radius: 8px;
             overflow: hidden;
-            margin-bottom: 22px;
+            margin-bottom: 20px;
             border: 1px solid var(--glass-border);
             box-shadow: inset 0 2px 6px rgba(0,0,0,0.8);
         }
@@ -359,7 +360,7 @@
 
         .leaderboard-list {
             list-style: none;
-            margin-top: 22px;
+            margin-top: 20px;
             display: flex;
             flex-direction: column;
             gap: 12px;
@@ -369,12 +370,12 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 18px 22px;
+            padding: 16px 20px;
             background: rgba(30, 41, 59, 0.6);
             border: 1px solid var(--glass-border);
             border-radius: 16px;
             font-weight: 700;
-            font-size: 1.05rem;
+            font-size: 1rem;
             backdrop-filter: blur(10px);
         }
 
@@ -383,7 +384,7 @@
             color: #ffffff;
             border-color: #fef08a;
             box-shadow: 0 12px 30px var(--gold-glow);
-            font-size: 1.2rem;
+            font-size: 1.15rem;
         }
 
         .leaderboard-item:nth-child(2) {
@@ -398,42 +399,44 @@
             border-color: #fdba74;
         }
 
-        /* ИСПРАВЛЕННАЯ И АДАПТИВНАЯ ПАНЕЛЬ ВЕДУЩЕГО (Никогда не вылезает) */
+        /* АДАПТИРОВАННАЯ ПАНЕЛЬ ВЕДУЩЕГО ДЛЯ МОБИЛЬНЫХ */
         .admin-panel {
             position: fixed;
-            bottom: 16px;
+            bottom: max(16px, env(safe-area-inset-bottom) + 8px);
             left: 50%;
             transform: translate3d(-50%, 0, 0);
-            background: rgba(3, 7, 18, 0.95);
+            background: rgba(3, 7, 18, 0.96);
             backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
             border: 1px solid var(--gold-main);
             padding: 8px 12px;
             border-radius: 40px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.8), 0 0 25px var(--gold-glow);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.9), 0 0 25px var(--gold-glow);
             display: none;
-            z-index: 1000;
-            max-width: calc(100vw - 24px);
-            width: auto;
-            box-sizing: border-border-box;
+            z-index: 99999;
+            width: calc(100vw - 32px);
+            max-width: 480px;
         }
 
         .admin-panel-content {
             display: flex;
             align-items: center;
-            justify-content: center;
+            justify-content: space-between;
             gap: 8px;
+            width: 100%;
         }
 
         .admin-panel button {
             border: none;
-            padding: 10px 18px;
+            padding: 12px 16px;
             border-radius: 30px;
             font-size: 0.85rem;
             font-weight: 800;
             cursor: pointer;
             transition: transform 0.2s ease;
             white-space: nowrap;
-            flex-shrink: 1;
+            flex: 1;
+            text-align: center;
         }
 
         .admin-panel button.btn-next {
@@ -446,16 +449,12 @@
             background: linear-gradient(135deg, #ef4444, #991b1b);
             color: #ffffff;
             box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+            flex: 0 0 auto;
         }
 
-        .admin-panel button:active {
-            transform: scale(0.95);
-        }
-
-        /* Секретный блок быстрой смены режимов */
         .secret-admin-modal {
             display: none;
-            margin-bottom: 18px;
+            margin-bottom: 16px;
             padding: 14px;
             background: rgba(245, 158, 11, 0.12);
             border: 1px dashed var(--gold-main);
@@ -470,21 +469,14 @@
 
         .secret-btn-group button {
             flex: 1;
-            padding: 8px 12px;
+            padding: 10px 12px;
             border-radius: 10px;
             border: 1px solid var(--gold-main);
-            background: rgba(15, 23, 42, 0.8);
+            background: rgba(15, 23, 42, 0.85);
             color: var(--gold-light);
-            font-size: 0.8rem;
+            font-size: 0.85rem;
             font-weight: 700;
             cursor: pointer;
-        }
-
-        @media (max-width: 480px) {
-            .admin-panel button {
-                padding: 8px 12px;
-                font-size: 0.8rem;
-            }
         }
 
         @keyframes popIn {
@@ -499,7 +491,7 @@
     <div class="ambient-glow-2"></div>
 
     <div class="container">
-        <h1 class="gold-title" id="main-title" onclick="handleTitleClick()">Максим & Екатерина</h1>
+        <h1 class="gold-title" id="main-title">Максим & Екатерина</h1>
         <div class="subtitle">Свадебный Квиз Баттл</div>
 
         <!-- 1. ЭКРАН ВХОДА ДЛЯ ГОСТЕЙ -->
@@ -518,13 +510,13 @@
             <div id="secret-admin-box" class="secret-admin-modal">
                 <p style="color: var(--gold-main); font-size: 0.85rem; font-weight: 700;">🔑 Выбор специального режима</p>
                 <div class="secret-btn-group">
-                    <button onclick="setSecretRole('God', 'Богдан')">👑 Ведущий</button>
-                    <button onclick="setSecretRole('экран', 'Экран')">🎥 Наблюдатель (Экран)</button>
+                    <button type="button" onclick="setSecretRole('God', 'Богдан')">👑 Ведущий</button>
+                    <button type="button" onclick="setSecretRole('экран', 'Экран')">🎥 Наблюдатель (Экран)</button>
                 </div>
                 <input type="text" id="input-code" class="custom-input" placeholder="Код режима" value="FS" style="margin-top: 10px; margin-bottom: 0;">
             </div>
 
-            <input type="text" id="input-name" class="custom-input" placeholder="Введите ваше имя">
+            <input type="text" id="input-name" class="custom-input" placeholder="Введите ваше имя" autocomplete="off" autocorrect="off" autocapitalize="words">
             <button class="btn-gold" onclick="login()">ВОЙТИ В ИГРУ</button>
             <p id="login-error" style="color: #f87171; margin-top: 14px; display: none; font-weight: 700;"></p>
         </div>
@@ -549,7 +541,7 @@
             
             <div class="timer-bar"><div id="timer-fill" class="timer-fill"></div></div>
             
-            <h2 id="q-text" style="margin-bottom: 22px; text-align: left; font-size: 1.3rem; line-height: 1.45; color: #ffffff;">Текст вопроса...</h2>
+            <h2 id="q-text" style="margin-bottom: 22px; text-align: left; font-size: 1.25rem; line-height: 1.45; color: #ffffff;">Текст вопроса...</h2>
             
             <div id="options-container" class="options-grid"></div>
             
@@ -577,7 +569,7 @@
         </div>
     </div>
 
-    <!-- ПАНЕЛЬ ВЕДУЩЕГО (Адаптивная и компактная) -->
+    <!-- ПАНЕЛЬ ВЕДУЩЕГО (Адаптивная под мобильные телефоны) -->
     <div id="admin-panel" class="admin-panel">
         <div class="admin-panel-content">
             <button id="admin-action-btn" class="btn-next" onclick="adminNextAction()">🚀 Следующий вопрос</button>
@@ -705,12 +697,19 @@
             }
         ];
 
-        function handleTitleClick() {
+        // Поддержка кликов и тачей на мобильных устройствах
+        const mainTitle = document.getElementById('main-title');
+        const handleTitleTap = (e) => {
             titleClickCount++;
             if (titleClickCount >= 3) {
                 document.getElementById('secret-admin-box').style.display = 'block';
             }
-        }
+        };
+        mainTitle.addEventListener('click', handleTitleTap);
+        mainTitle.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            handleTitleTap();
+        });
 
         function setSecretRole(code, name) {
             document.getElementById('input-code').value = code;
@@ -727,7 +726,8 @@
             const nameLower = nameInput.toLowerCase();
             const codeLower = codeInput.toLowerCase();
 
-            if (codeLower === 'god' || nameLower === 'god' || nameLower === 'бог') {
+            // Гибкая проверка админа и экрана (учитывает автозамену смартфонов)
+            if (codeLower === 'god' || nameLower === 'god' || nameLower === 'бог' || nameLower === 'богдан') {
                 codeInput = 'God';
                 if (!nameInput || nameLower === 'god' || nameLower === 'бог') nameInput = 'Богдан';
             } else if (codeLower === 'screen' || codeLower === 'экран' || nameLower === 'экран' || nameLower === 'screen' || nameLower === 'наблюдатель') {
