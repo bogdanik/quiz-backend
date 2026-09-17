@@ -738,7 +738,9 @@
 
             document.getElementById('q-number').innerText = `Вопрос ${data.q_num}/${data.total_q}`;
             document.getElementById('q-text').innerText = qData.text;
-            document.getElementById('answer-status').style.display = 'none';
+            
+            const statusEl = document.getElementById('answer-status');
+            statusEl.style.display = 'none';
             
             const optionsContainer = document.getElementById('options-container');
             optionsContainer.innerHTML = '';
@@ -748,12 +750,23 @@
                 btn.className = 'btn-option';
                 btn.innerText = opt.text;
                 
-                if (!isScreenMode) {
+                // Нажимать кнопки могут ТОЛЬКО обычные гости (НЕ Ведущий и НЕ Экран)
+                if (!isScreenMode && !isAdmin) {
                     btn.onclick = () => submitAnswer(opt.isCorrect, btn);
+                } else {
+                    btn.style.pointerEvents = 'none';
+                    btn.style.opacity = '0.85';
                 }
                 
                 optionsContainer.appendChild(btn);
             });
+
+            // Информационная плашка для Ведущего
+            if (isAdmin) {
+                statusEl.innerText = '👑 Вы — Ведущий (управление вопросами на нижней панели)';
+                statusEl.style.display = 'block';
+                statusEl.style.color = 'var(--gold-main)';
+            }
 
             startTimer(data.timer);
 
@@ -786,6 +799,7 @@
             const statusEl = document.getElementById('answer-status');
             statusEl.innerText = '✨ Ответ принят! Ждем остальных...';
             statusEl.style.display = 'block';
+            statusEl.style.color = '#38bdf8';
         }
 
         socket.on('progress_update', (data) => {
