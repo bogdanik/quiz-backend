@@ -399,7 +399,6 @@
             border-color: #fdba74;
         }
 
-        /* АДАПТИРОВАННАЯ ПАНЕЛЬ ВЕДУЩЕГО ДЛЯ МОБИЛЬНЫХ */
         .admin-panel {
             position: fixed;
             bottom: max(16px, env(safe-area-inset-bottom) + 8px);
@@ -461,24 +460,6 @@
             border-radius: 16px;
         }
 
-        .secret-btn-group {
-            display: flex;
-            gap: 8px;
-            margin-top: 10px;
-        }
-
-        .secret-btn-group button {
-            flex: 1;
-            padding: 10px 12px;
-            border-radius: 10px;
-            border: 1px solid var(--gold-main);
-            background: rgba(15, 23, 42, 0.85);
-            color: var(--gold-light);
-            font-size: 0.85rem;
-            font-weight: 700;
-            cursor: pointer;
-        }
-
         @keyframes popIn {
             0% { opacity: 0; transform: translate3d(0, 12px, 0) scale(0.92); }
             100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
@@ -506,14 +487,10 @@
                 </ul>
             </div>
 
-            <!-- Секретный блок управления режимами -->
+            <!-- Секретный блок пароля (открывается тройным кликом по заголовку) -->
             <div id="secret-admin-box" class="secret-admin-modal">
-                <p style="color: var(--gold-main); font-size: 0.85rem; font-weight: 700;">🔑 Выбор специального режима</p>
-                <div class="secret-btn-group">
-                    <button type="button" onclick="setSecretRole('God', 'Богдан')">👑 Ведущий</button>
-                    <button type="button" onclick="setSecretRole('экран', 'Экран')">🎥 Наблюдатель (Экран)</button>
-                </div>
-                <input type="text" id="input-code" class="custom-input" placeholder="Код режима" value="FS" style="margin-top: 10px; margin-bottom: 0;">
+                <p style="color: var(--gold-main); font-size: 0.85rem; font-weight: 700; margin-bottom: 8px;">🔑 Введите пароль доступа</p>
+                <input type="password" id="input-code" class="custom-input" placeholder="Пароль (например: бог)" value="" style="margin-bottom: 0;" autocomplete="off" autocorrect="off" autocapitalize="none">
             </div>
 
             <input type="text" id="input-name" class="custom-input" placeholder="Введите ваше имя" autocomplete="off" autocorrect="off" autocapitalize="words">
@@ -569,10 +546,10 @@
         </div>
     </div>
 
-    <!-- ПАНЕЛЬ ВЕДУЩЕГО (Адаптивная под мобильные телефоны) -->
+    <!-- ПАНЕЛЬ ВЕДУЩЕГО (По умолчанию «Запустить квиз») -->
     <div id="admin-panel" class="admin-panel">
         <div class="admin-panel-content">
-            <button id="admin-action-btn" class="btn-next" onclick="adminNextAction()">🚀 Следующий вопрос</button>
+            <button id="admin-action-btn" class="btn-next" onclick="adminNextAction()">🚀 Запустить квиз</button>
             <button class="btn-danger" onclick="adminEndSession()">🛑 Завершить</button>
         </div>
     </div>
@@ -697,9 +674,9 @@
             }
         ];
 
-        // Поддержка кликов и тачей на мобильных устройствах
+        // Тройной клик / тап по заголовку открывает секретное поле ввода пароля
         const mainTitle = document.getElementById('main-title');
-        const handleTitleTap = (e) => {
+        const handleTitleTap = () => {
             titleClickCount++;
             if (titleClickCount >= 3) {
                 document.getElementById('secret-admin-box').style.display = 'block';
@@ -711,28 +688,11 @@
             handleTitleTap();
         });
 
-        function setSecretRole(code, name) {
-            document.getElementById('input-code').value = code;
-            document.getElementById('input-name').value = name;
-            login();
-        }
-
         function login() {
             let nameInput = document.getElementById('input-name').value.trim();
             let codeInput = document.getElementById('input-code').value.trim();
             const errorEl = document.getElementById('login-error');
             errorEl.style.display = 'none';
-
-            const nameLower = nameInput.toLowerCase();
-            const codeLower = codeInput.toLowerCase();
-
-            // Гибкая проверка админа и экрана (учитывает автозамену смартфонов)
-            if (codeLower === 'god' || nameLower === 'god' || nameLower === 'бог' || nameLower === 'богдан') {
-                codeInput = 'God';
-                if (!nameInput || nameLower === 'god' || nameLower === 'бог') nameInput = 'Богдан';
-            } else if (codeLower === 'screen' || codeLower === 'экран' || nameLower === 'экран' || nameLower === 'screen' || nameLower === 'наблюдатель') {
-                codeInput = 'экран';
-            }
 
             socket.emit('login', { code: codeInput, name: nameInput });
         }
@@ -750,6 +710,7 @@
                 
                 if (isAdmin) {
                     document.getElementById('admin-panel').style.display = 'block';
+                    document.getElementById('admin-action-btn').innerText = '🚀 Запустить квиз';
                 }
             } else {
                 const errorEl = document.getElementById('login-error');
