@@ -41,7 +41,8 @@ def handle_login(data):
 
     if code == 'God':
         game_state["admin_sid"] = sid
-        game_state["players"][sid] = {"name": f"{name} (Ведущий)", "score": 0, "answered": True, "is_admin": True}
+        host_name = name if name else "Богдан"
+        game_state["players"][sid] = {"name": f"{host_name} — Ведущий", "score": 0, "answered": True, "is_admin": True}
         emit('login_response', {'success': True, 'is_admin': True})
         broadcast_lobby()
 
@@ -81,14 +82,13 @@ def handle_start_question():
     for p in game_state["players"].values():
         p["answered"] = False
 
-    # Отправляем ВСЕМ только номер вопроса и таймер
     socketio.emit('show_question', {
         'q_num': idx + 1,
         'total_q': TOTAL_QUESTIONS,
         'timer': 30
     })
 
-# --- 3. ПРИЕМ ФЛАГА (TRUE / FALSE) И РАСЧЕТ БАЛЛОВ ---
+# --- 3. ПРИЕМ ФЛАГА И РАСЧЕТ БАЛЛОВ ---
 @socketio.on('submit_answer')
 def handle_submit_answer(data):
     sid = request.sid
@@ -103,15 +103,11 @@ def handle_submit_answer(data):
     time_left = max(0, 30 - time_taken)
 
     player["answered"] = True
-    
-    # Потенциальный бонус за скорость (0..100)
     speed_bonus = 100 * (time_left / 30.0)
 
     if is_correct:
-        # ПРАВИЛЬНО: 100 базовых + весь бонус за скорость
         points = 100 + speed_bonus
     else:
-        # НЕПРАВИЛЬНО: 0 базовых + 50% от бонуса за скорость
         points = speed_bonus * 0.5
 
     player["score"] += round(points)
@@ -134,6 +130,29 @@ def handle_next_round():
         return
     game_state["current_q_index"] += 1
     handle_start_question()
+
+# --- 4. ЗАВЕРШЕНИЕ СЕССИИ И ОПРЕДЕЛЕНИЕ ПОБЕДИТЕЛЯ ---
+@socketio.on('admin_end_session')
+def handle_end_session():
+    if request.sid != game_state["admin_sid"]:
+        return
+    
+    # Находим имя победителя (игрока с максимальными баллами)
+    winner_name = "Все гости"
+    non_admin_players = [p for p in game_state["players"].values() if not p.get("is_admin")]
+    if non_admin_players:
+        winner = max(non_admin_players, key=lambda x: x["score"])
+        winner_name = winner["name"]
+
+    # Отправляем всем сообщение с именем победителя
+    socketio.emit('session_ended', {'winner_name': winner_name})
+
+    # Сброс состояния игры
+    game_state["status"] = "LOBBY"
+    game_state["current_q_index"] = 0
+    game_state["q_start_time"] = 0
+    game_state["players"] = {}
+    game_state["admin_sid"] = None
 
 def send_final_results():
     leaderboard = sorted(
