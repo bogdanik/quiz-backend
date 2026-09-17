@@ -13,7 +13,7 @@ game_state = {
     "status": "LOBBY",  # LOBBY, QUESTION, PAUSE, FINISHED
     "current_q_index": 0,
     "q_start_time": 0,
-    "players": {},  # { socket_id: {"name": "Имя", "score": 0, "answered": False, "is_admin": False} }
+    "players": {},  # { socket_id: {"name": "Имя", "score": 0, "answered": False, "is_admin": False, "is_observer": False} }
     "admin_sid": None
 }
 
@@ -44,16 +44,34 @@ def handle_login(data):
     if code == 'God':
         game_state["admin_sid"] = sid
         host_name = name if name else "Богдан"
-        game_state["players"][sid] = {"name": f"{host_name} — Ведущий", "score": 0, "answered": True, "is_admin": True}
-        emit('login_response', {'success': True, 'is_admin': True})
+        game_state["players"][sid] = {"name": f"{host_name} — Ведущий", "score": 0, "answered": True, "is_admin": True, "is_observer": False}
+        emit('login_response', {'success': True, 'is_admin': True, 'is_screen': False})
         broadcast_lobby()
+
+    elif code.lower() in ['screen', 'экран']:
+        # Вход в режиме ЭКРАНА / НАБЛЮДАТЕЛЯ
+        game_state["players"][sid] = {"name": "🎥 Экран", "score": 0, "answered": True, "is_admin": False, "is_observer": True}
+        emit('login_response', {'success': True, 'is_admin': False, 'is_screen': True})
+        broadcast_lobby()
+        
+        # Если игра уже идет — сразу подтягиваем текущий вопрос на экран
+        if game_state["status"] == "QUESTION":
+            idx = game_state["current_q_index"]
+            time_taken = time.time() - game_state["q_start_time"]
+            time_left = max(0, 30 - time_taken)
+            emit('show_question', {
+                'q_num': idx + 1,
+                'total_q': TOTAL_QUESTIONS,
+                'timer': time_left
+            })
+            check_all_answered()
 
     elif code == 'FS':
         if not name:
             emit('login_response', {'success': False, 'message': 'Введите имя!'})
             return
-        game_state["players"][sid] = {"name": name, "score": 0, "answered": False, "is_admin": False}
-        emit('login_response', {'success': True, 'is_admin': False})
+        game_state["players"][sid] = {"name": name, "score": 0, "answered": False, "is_admin": False, "is_observer": False}
+        emit('login_response', {'success': True, 'is_admin': False, 'is_screen': False})
         broadcast_lobby()
         if game_state["status"] == "QUESTION":
             check_all_answered()
@@ -62,7 +80,8 @@ def handle_login(data):
         emit('login_response', {'success': False, 'message': 'Неверный пароль!'})
 
 def broadcast_lobby():
-    players_list = [{"name": p["name"], "score": p["score"]} for p in game_state["players"].values()]
+    # В списке лобби показываем только реальных участников и ведущего (экран скрываем)
+    players_list = [{"name": p["name"], "score": p["score"]} for p in game_state["players"].values() if not p.get("is_observer")]
     socketio.emit('update_lobby', {
         'players': players_list,
         'status': game_state["status"]
@@ -83,7 +102,6 @@ def handle_start_question():
     game_state["status"] = "QUESTION"
     game_state["q_start_time"] = time.time()
     
-    # Сбрасываем флаг ответа у всех участников для нового вопроса
     for p in game_state["players"].values():
         p["answered"] = False
 
@@ -93,7 +111,6 @@ def handle_start_question():
         'timer': 30
     })
 
-    # Сразу мгновенно сбрасываем счетчик на экранах: "Ответили: 0 из N"
     check_all_answered()
 
 # --- 3. ПРИЕМ ФЛАГА И РАСЧЕТ БАЛЛОВ ---
@@ -102,7 +119,7 @@ def handle_submit_answer(data):
     sid = request.sid
     player = game_state["players"].get(sid)
 
-    if not player or game_state["status"] != "QUESTION" or player["answered"] or player.get("is_admin"):
+    if not player or game_state["status"] != "QUESTION" or player["answered"] or player.get("is_admin") or player.get("is_observer"):
         return
 
     is_correct = bool(data.get('is_correct', False))
@@ -124,7 +141,8 @@ def handle_submit_answer(data):
     check_all_answered()
 
 def check_all_answered():
-    total_players = [p for p in game_state["players"].values() if not p.get("is_admin")]
+    # Считаем только живых игроков (без админа и экрана)
+    total_players = [p for p in game_state["players"].values() if not p.get("is_admin") and not p.get("is_observer")]
     answered_players = [p for p in total_players if p["answered"]]
 
     socketio.emit('progress_update', {
@@ -137,7 +155,6 @@ def handle_next_round():
     if request.sid != game_state["admin_sid"]:
         return
 
-    # ФИКС: Если старт происходит из ЛОББИ — запускаем вопрос №1 (индекс 0), иначе прибавляем +1
     if game_state["status"] == "LOBBY":
         game_state["current_q_index"] = 0
     else:
@@ -152,7 +169,7 @@ def handle_end_session():
         return
     
     winner_name = "Все гости"
-    non_admin_players = [p for p in game_state["players"].values() if not p.get("is_admin")]
+    non_admin_players = [p for p in game_state["players"].values() if not p.get("is_admin") and not p.get("is_observer")]
     if non_admin_players:
         winner = max(non_admin_players, key=lambda x: x["score"])
         winner_name = winner["name"]
@@ -167,7 +184,7 @@ def handle_end_session():
 
 def send_final_results():
     leaderboard = sorted(
-        [{"name": p["name"], "score": p["score"]} for p in game_state["players"].values() if not p.get("is_admin")],
+        [{"name": p["name"], "score": p["score"]} for p in game_state["players"].values() if not p.get("is_admin") and not p.get("is_observer")],
         key=lambda x: x["score"],
         reverse=True
     )
