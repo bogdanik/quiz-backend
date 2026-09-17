@@ -36,16 +36,44 @@ def handle_disconnect():
 def handle_login(data):
     code = str(data.get('code', '')).strip().lower()
     name = str(data.get('name', '')).strip()
-    name_lower = name.lower()
     sid = request.sid
 
-    # Секретный пароль (god / бог)
-    if code in ['god', 'бог']:
-        if name_lower in ['экран', 'screen', 'наблюдатель']:
-            game_state["players"][sid] = {"name": "🎥 Экран", "score": 0, "answered": True, "is_admin": False, "is_observer": True}
+    # 1. РЕЖИМ ВЕДУЩЕГО (ПИН 111 или "ведущий")
+    if code in ['111', 'ведущий', 'god', 'бог']:
+        game_state["admin_sid"] = sid
+        host_name = name if name else "Богдан"
+        game_state["players"][sid] = {"name": f"{host_name} — Ведущий", "score": 0, "answered": True, "is_admin": True, "is_observer": False}
+        emit('login_response', {'success': True, 'is_admin': True, 'is_screen': False})
+        broadcast_lobby()
+
+    # 2. РЕЖИМ ЭКРАНА / НАБЛЮДАТЕЛЯ (ПИН 222 или "экран")
+    elif code in ['222', 'экран', 'screen', 'наблюдатель']:
+        game_state["players"][sid] = {"name": "🎥 Экран", "score": 0, "answered": True, "is_admin": False, "is_observer": True}
+        emit('login_response', {'success': True, 'is_admin': False, 'is_screen': True})
+        broadcast_lobby()
+        
+        if game_state["status"] == "QUESTION":
+            idx = game_state["current_q_index"]
+            time_taken = time.time() - game_state["q_start_time"]
+            emit('show_question', {
+                'q_num': idx + 1,
+                'total_q': TOTAL_QUESTIONS,
+                'timer': max(0, 30 - time_taken)
+            })
+            check_all_answered()
+
+    # 3. ВХОД ДЛЯ ОБЫЧНЫХ ГОСТЕЙ
+    elif code in ['fs', ''] or not code:
+        if not name:
+            emit('login_response', {'success': False, 'message': 'Введите ваше имя!'})
+            return
+
+        # Если квиз УЖЕ ИДЕТ — перенаправляем опоздавшего гостя в режим ЗРИТЕЛЯ
+        if game_state["status"] != "LOBBY":
+            game_state["players"][sid] = {"name": f"{name} (Зритель)", "score": 0, "answered": True, "is_admin": False, "is_observer": True}
             emit('login_response', {'success': True, 'is_admin': False, 'is_screen': True})
             broadcast_lobby()
-            
+
             if game_state["status"] == "QUESTION":
                 idx = game_state["current_q_index"]
                 time_taken = time.time() - game_state["q_start_time"]
@@ -55,30 +83,15 @@ def handle_login(data):
                     'timer': max(0, 30 - time_taken)
                 })
                 check_all_answered()
-        else:
-            game_state["admin_sid"] = sid
-            host_name = name if name else "Богдан"
-            game_state["players"][sid] = {"name": f"{host_name} — Ведущий", "score": 0, "answered": True, "is_admin": True, "is_observer": False}
-            emit('login_response', {'success': True, 'is_admin': True, 'is_screen': False})
-            broadcast_lobby()
-
-    elif code in ['screen', 'экран'] or name_lower in ['экран', 'screen', 'наблюдатель']:
-        game_state["players"][sid] = {"name": "🎥 Экран", "score": 0, "answered": True, "is_admin": False, "is_observer": True}
-        emit('login_response', {'success': True, 'is_admin': False, 'is_screen': True})
-        broadcast_lobby()
-
-    elif code == 'fs' or code == '':
-        if not name:
-            emit('login_response', {'success': False, 'message': 'Введите ваше имя!'})
             return
+
+        # Если игра еще в ЛОББИ — заводим как активного игрока
         game_state["players"][sid] = {"name": name, "score": 0, "answered": False, "is_admin": False, "is_observer": False}
         emit('login_response', {'success': True, 'is_admin': False, 'is_screen': False})
         broadcast_lobby()
-        if game_state["status"] == "QUESTION":
-            check_all_answered()
 
     else:
-        emit('login_response', {'success': False, 'message': 'Неверный пароль!'})
+        emit('login_response', {'success': False, 'message': 'Неверный ПИН-код!'})
 
 def broadcast_lobby():
     players_list = [{"name": p["name"], "score": p["score"]} for p in game_state["players"].values() if not p.get("is_observer")]
