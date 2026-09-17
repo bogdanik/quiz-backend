@@ -4,26 +4,11 @@ from flask import Flask, request
 from flask_socketio import SocketIO, emit
 
 app = Flask(__name__)
-# cors_allowed_origins="*" позволяет подключаться с вашего GitHub Pages
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-# --- БАЗА ДАННЫХ ВОПРОСОВ ---
-QUESTIONS = [
-    {
-        "id": 1,
-        "text": "Сколько спутников у Юпитера (по данным на 2026 год)?",
-        "options": ["79", "95", "12", "48"],
-        "correct": 1  # Индекс правильного ответа (95)
-    },
-    {
-        "id": 2,
-        "text": "Какой язык программирования мы используем для бэкенда?",
-        "options": ["PHP", "JavaScript", "Python", "C++"],
-        "correct": 2  # Python
-    }
-]
+TOTAL_QUESTIONS = 12  # Всего вопросов в квизе
 
-# --- СОСТОЯНИЕ ИГРЫ (GAME STATE) ---
+# --- СОСТОЯНИЕ ИГРЫ ---
 game_state = {
     "status": "LOBBY",  # LOBBY, QUESTION, PAUSE, FINISHED
     "current_q_index": 0,
@@ -47,7 +32,7 @@ def handle_disconnect():
         game_state["admin_sid"] = None
     print(f"Отключение: {sid}")
 
-# --- 1. АВТОРИЗАЦИЯ И ВХОД ---
+# --- 1. ВХОД И АВТОРИЗАЦИЯ ---
 @socketio.on('login')
 def handle_login(data):
     code = data.get('code', '').strip()
@@ -72,66 +57,57 @@ def handle_login(data):
         emit('login_response', {'success': False, 'message': 'Неверный пароль!'})
 
 def broadcast_lobby():
-    # Отправляем всем актуальный список игроков
     players_list = [{"name": p["name"], "score": p["score"]} for p in game_state["players"].values()]
     socketio.emit('update_lobby', {
         'players': players_list,
         'status': game_state["status"]
     })
 
-# --- 2. УПРАВЛЕНИЕ ИГРОЙ (ТОЛЬКО ДЛЯ АДМИНА) ---
+# --- 2. УПРАВЛЕНИЕ РАУНДАМИ ---
 @socketio.on('admin_start_question')
 def handle_start_question():
     if request.sid != game_state["admin_sid"]:
-        return  # Игнорируем, если жмет не админ
+        return
 
     idx = game_state["current_q_index"]
-    if idx >= len(QUESTIONS):
-        # Вопросы кончились -> Финал
+    if idx >= TOTAL_QUESTIONS:
         game_state["status"] = "FINISHED"
         send_final_results()
         return
 
-    q_data = QUESTIONS[idx]
     game_state["status"] = "QUESTION"
     game_state["q_start_time"] = time.time()
     
-    # Сбрасываем флаг ответа у всех участников
     for p in game_state["players"].values():
         p["answered"] = False
 
-    # Отправляем вопрос ВСЕМ (без поля 'correct'!)
+    # Отправляем ВСЕМ только номер вопроса и таймер
     socketio.emit('show_question', {
         'q_num': idx + 1,
-        'total_q': len(QUESTIONS),
-        'text': q_data['text'],
-        'options': q_data['options'],
+        'total_q': TOTAL_QUESTIONS,
         'timer': 30
     })
 
-# --- 3. ПРИЕМ ОТВЕТОВ И МАТЕМАТИКА БАЛЛОВ ---
+# --- 3. ПРИЕМ ФЛАГА (TRUE / FALSE) И РАСЧЕТ БАЛЛОВ ---
 @socketio.on('submit_answer')
 def handle_submit_answer(data):
     sid = request.sid
     player = game_state["players"].get(sid)
 
-    # Проверки: зарегин ли игрок, идет ли вопрос и не отвечал ли он уже
     if not player or game_state["status"] != "QUESTION" or player["answered"] or player.get("is_admin"):
         return
 
-    selected_option = data.get('option_index')
+    is_correct = bool(data.get('is_correct', False))
     now = time.time()
-    time_taken = now - game_state["q_start_time"]  # За сколько секунд ответил
-    time_left = max(0, 30 - time_taken)  # Сколько секунд оставалось (из 30)
+    time_taken = now - game_state["q_start_time"]
+    time_left = max(0, 30 - time_taken)
 
     player["answered"] = True
     
-    # Считаем потенциальный бонус за скорость (от 0 до 100)
+    # Потенциальный бонус за скорость (0..100)
     speed_bonus = 100 * (time_left / 30.0)
 
-    correct_option = QUESTIONS[game_state["current_q_index"]]["correct"]
-
-    if selected_option == correct_option:
+    if is_correct:
         # ПРАВИЛЬНО: 100 базовых + весь бонус за скорость
         points = 100 + speed_bonus
     else:
@@ -140,17 +116,13 @@ def handle_submit_answer(data):
 
     player["score"] += round(points)
 
-    # Отправляем игроку подтверждение, что ответ принят
     emit('answer_accepted', {'score_added': round(points)})
-
-    # Проверяем, сколько человек ответило
     check_all_answered()
 
 def check_all_answered():
     total_players = [p for p in game_state["players"].values() if not p.get("is_admin")]
     answered_players = [p for p in total_players if p["answered"]]
 
-    # Рассылаем всем счетчик: "Ответили 5 из 10"
     socketio.emit('progress_update', {
         'answered': len(answered_players),
         'total': len(total_players)
@@ -164,7 +136,6 @@ def handle_next_round():
     handle_start_question()
 
 def send_final_results():
-    # Сортируем игроков по очкам
     leaderboard = sorted(
         [{"name": p["name"], "score": p["score"]} for p in game_state["players"].values() if not p.get("is_admin")],
         key=lambda x: x["score"],
@@ -173,6 +144,5 @@ def send_final_results():
     socketio.emit('show_results', {'leaderboard': leaderboard})
 
 if __name__ == '__main__':
-    # Автоматически считываем порт от Render (переменная PORT) или ставим 5000 по умолчанию
     port = int(os.environ.get('PORT', 5000))
     socketio.run(app, host='0.0.0.0', port=port, allow_unsafe_werkzeug=True)
