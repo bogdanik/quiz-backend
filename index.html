@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Свадебный Квиз: Максим & Екатерина</title>
+    
+    <!-- Подключаем премиум-шрифты -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+
+    <style>
+        :root {
+            --bg-black: #030712;
+            --gold-light: #fff3a1;
+            --gold-main: #f59e0b;
+            --gold-dark: #b45309;
+            --gold-glow: rgba(245, 158, 11, 0.45);
+            --blue-accent: #0284c7;
+            --blue-glow: rgba(56, 189, 248, 0.35);
+            --glass-card: rgba(11, 17, 32, 0.78);
+            --glass-border: rgba(245, 158, 11, 0.28);
+            --text-light: #f8fafc;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-black);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            overflow-x: hidden;
+            position: relative;
+            color: var(--text-light);
+        }
+
+        /* Анимированные световые блики на фоне (120 FPS GPU) */
+        .ambient-glow-1 {
+            position: fixed;
+            top: -10%;
+            left: -10%;
+            width: 50vw;
+            height: 50vw;
+            background: radial-gradient(circle, var(--gold-glow) 0%, transparent 70%);
+            border-radius: 50%;
+            filter: blur(80px);
+            z-index: -1;
+            animation: floatGlow 12s infinite alternate ease-in-out;
+            will-change: transform;
+        }
+
+        .ambient-glow-2 {
+            position: fixed;
+            bottom: -10%;
+            right: -10%;
+            width: 55vw;
+            height: 55vw;
+            background: radial-gradient(circle, var(--blue-glow) 0%, transparent 70%);
+            border-radius: 50%;
+            filter: blur(90px);
+            z-index: -1;
+            animation: floatGlow 15s infinite alternate-reverse ease-in-out;
+            will-change: transform;
+        }
+
+        @keyframes floatGlow {
+            0% { transform: translate3d(0, 0, 0) scale(1); }
+            100% { transform: translate3d(30px, -40px, 0) scale(1.15); }
+        }
+
+        /* Главная карточка из стекла с золотым напылением */
+        .container {
+            width: 100%;
+            max-width: 640px;
+            background: var(--glass-card);
+            backdrop-filter: blur(30px) saturate(200%);
+            -webkit-backdrop-filter: blur(30px) saturate(200%);
+            border: 1px solid var(--glass-border);
+            padding: 32px 26px;
+            border-radius: 28px;
+            box-shadow: 
+                0 30px 70px rgba(0, 0, 0, 0.9),
+                0 0 40px rgba(245, 158, 11, 0.15),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            text-align: center;
+            position: relative;
+            transform: translate3d(0,0,0);
+        }
+
+        /* Роскошный золотой заголовок */
+        .gold-title {
+            font-family: 'Cinzel', serif;
+            font-size: 2.2rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #ffffff 0%, var(--gold-light) 25%, var(--gold-main) 65%, var(--gold-dark) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 20px var(--gold-glow);
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .subtitle {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            color: var(--gold-main);
+            font-weight: 700;
+            margin-bottom: 22px;
+        }
+
+        .screen {
+            display: none;
+            opacity: 0;
+            transform: translate3d(0, 12px, 0);
+            transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1), transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+            will-change: transform, opacity;
+        }
+
+        .screen.active {
+            display: block;
+            opacity: 1;
+            transform: translate3d(0, 0, 0);
+        }
+
+        /* Красивый блок правил */
+        .rules-box {
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.7), rgba(30, 41, 59, 0.7));
+            border: 1px solid rgba(245, 158, 11, 0.35);
+            padding: 20px;
+            border-radius: 18px;
+            text-align: left;
+            margin-bottom: 24px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+        }
+
+        .rules-box-title {
+            font-family: 'Cinzel', serif;
+            color: var(--gold-light);
+            font-size: 1.15rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .rules-box ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .rules-box li {
+            position: relative;
+            padding-left: 26px;
+            margin-bottom: 10px;
+            color: #cbd5e1;
+            font-size: 0.95rem;
+            line-height: 1.45;
+        }
+
+        .rules-box li::before {
+            content: "✦";
+            position: absolute;
+            left: 0;
+            color: var(--gold-main);
+            font-size: 1.1rem;
+        }
+
+        /* Поле ввода имени */
+        input.custom-input {
+            width: 100%;
+            padding: 18px 20px;
+            margin-bottom: 16px;
+            border-radius: 16px;
+            border: 1px solid var(--glass-border);
+            background: rgba(3, 7, 18, 0.7);
+            color: #ffffff;
+            font-size: 1.1rem;
+            font-weight: 600;
+            outline: none;
+            transition: all 0.25s ease;
+            box-shadow: inset 0 2px 6px rgba(0,0,0,0.6);
+        }
+
+        input.custom-input:focus {
+            border-color: var(--gold-main);
+            box-shadow: 0 0 20px var(--gold-glow), inset 0 2px 6px rgba(0,0,0,0.6);
+            background: rgba(3, 7, 18, 0.9);
+        }
+
+        /* Шикарная золотая кнопка */
+        button.btn-gold {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, var(--gold-light) 0%, var(--gold-main) 50%, var(--gold-dark) 100%);
+            color: #030712;
+            font-weight: 800;
+            border: none;
+            border-radius: 16px;
+            font-size: 1.1rem;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            box-shadow: 0 12px 30px var(--gold-glow);
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+            overflow: hidden;
+            will-change: transform;
+        }
+
+        button.btn-gold:active {
+            transform: scale(0.97);
+            box-shadow: 0 4px 15px var(--gold-glow);
+        }
+
+        /* Сетка участников в Лобби */
+        .players-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            justify-content: center;
+            margin-top: 20px;
+            max-height: 280px;
+            overflow-y: auto;
+            padding: 6px;
+        }
+
+        .player-card {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.8));
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+            animation: popIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .player-card.host {
+            background: linear-gradient(135deg, rgba(2, 132, 199, 0.9), rgba(14, 165, 233, 0.9));
+            color: #ffffff;
+            font-weight: 800;
+            border-color: #38bdf8;
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.5);
+        }
+
+        /* Кнопки ответов */
+        .options-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            margin-top: 20px;
+        }
+
+        .btn-option {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.7));
+            border: 1px solid var(--glass-border);
+            color: #ffffff;
+            padding: 20px 22px;
+            border-radius: 16px;
+            font-size: 1.05rem;
+            font-weight: 500;
+            text-align: left;
+            line-height: 1.5;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+            position: relative;
+        }
+
+        .btn-option:hover:not(:disabled) {
+            background: rgba(51, 65, 85, 0.85);
+            border-color: var(--gold-main);
+            transform: translate3d(0, -3px, 0);
+            box-shadow: 0 12px 25px rgba(0,0,0,0.5), 0 0 15px var(--gold-glow);
+        }
+
+        .btn-option:active:not(:disabled) {
+            transform: scale(0.98);
+        }
+
+        .btn-option:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-option.selected {
+            background: linear-gradient(135deg, var(--gold-light) 0%, var(--gold-main) 100%) !important;
+            color: #030712 !important;
+            font-weight: 800;
+            border-color: #ffffff !important;
+            box-shadow: 0 0 25px var(--gold-glow);
+            opacity: 1 !important;
+        }
+
+        /* Таймер */
+        .timer-bar {
+            width: 100%;
+            height: 12px;
+            background: rgba(3, 7, 18, 0.9);
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 22px;
+            border: 1px solid var(--glass-border);
+            box-shadow: inset 0 2px 6px rgba(0,0,0,0.8);
+        }
+
+        .timer-fill {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #38bdf8, var(--gold-main), var(--gold-light));
+            box-shadow: 0 0 15px var(--gold-glow);
+            will-change: width;
+        }
+
+        /* Таблица лидеров */
+        .leaderboard-list {
+            list-style: none;
+            margin-top: 22px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .leaderboard-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 18px 22px;
+            background: rgba(30, 41, 59, 0.6);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            font-weight: 700;
+            font-size: 1.05rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .leaderboard-item:nth-child(1) {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.95), rgba(180, 83, 9, 0.95));
+            color: #ffffff;
+            border-color: #fef08a;
+            box-shadow: 0 12px 30px var(--gold-glow);
+            font-size: 1.2rem;
+        }
+
+        .leaderboard-item:nth-child(2) {
+            background: linear-gradient(135deg, rgba(148, 163, 184, 0.85), rgba(71, 85, 105, 0.85));
+            color: #ffffff;
+            border-color: #cbd5e1;
+        }
+
+        .leaderboard-item:nth-child(3) {
+            background: linear-gradient(135deg, rgba(180, 83, 9, 0.8), rgba(120, 53, 15, 0.8));
+            color: #ffffff;
+            border-color: #fdba74;
+        }
+
+        /* Панель Ведущего */
+        .admin-panel {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translate3d(-50%, 0, 0);
+            background: rgba(3, 7, 18, 0.9);
+            backdrop-filter: blur(25px);
+            border: 1px solid var(--gold-main);
+            padding: 12px 24px;
+            border-radius: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.8), 0 0 30px var(--gold-glow);
+            display: none;
+            z-index: 1000;
+        }
+
+        .admin-panel button {
+            background: linear-gradient(135deg, var(--gold-light), var(--gold-main));
+            color: #030712;
+            font-weight: 800;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 30px;
+            font-size: 1.05rem;
+            cursor: pointer;
+            box-shadow: 0 6px 20px var(--gold-glow);
+        }
+
+        /* Скрытое окно входа админа */
+        .secret-admin-modal {
+            display: none;
+            margin-bottom: 16px;
+            padding: 12px;
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px dashed var(--gold-main);
+            border-radius: 12px;
+        }
+
+        @keyframes popIn {
+            0% { opacity: 0; transform: translate3d(0, 12px, 0) scale(0.92); }
+            100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Световые блики на фоне -->
+    <div class="ambient-glow-1"></div>
+    <div class="ambient-glow-2"></div>
+
+    <div class="container">
+        <!-- Титл с секретным триггером (тройной клик) -->
+        <h1 class="gold-title" id="main-title" onclick="handleTitleClick()">Максим & Екатерина</h1>
+        <div class="subtitle">Свадебный Квиз Баттл</div>
+
+        <!-- 1. ЭКРАН ВХОДА ДЛЯ ГОСТЕЙ -->
+        <div id="screen-login" class="screen active">
+            <div class="rules-box">
+                <div class="rules-box-title">👑 Правила Игры</div>
+                <ul>
+                    <li>Правильный ответ принесет вам <b>+100 баллов</b>.</li>
+                    <li>Бонус за скорость: <b>до +100 баллов</b> (быстро тает за 30 секунд).</li>
+                    <li>При ошибке: вы получаете штраф в <b>-50%</b> от бонуса за скорость.</li>
+                </ul>
+            </div>
+
+            <!-- Скрытый секретный ввод пароля (если кликнули 3 раза по заголовку) -->
+            <div id="secret-admin-box" class="secret-admin-modal">
+                <p style="color: var(--gold-main); font-size: 0.85rem; margin-bottom: 8px;">🔑 Режим Ведущего активирован</p>
+                <input type="text" id="input-code" class="custom-input" placeholder="Пароль администратора" value="FS">
+            </div>
+
+            <input type="text" id="input-name" class="custom-input" placeholder="Введите ваше имя">
+            <button class="btn-gold" onclick="login()">ВОЙТИ В ИГРУ</button>
+            <p id="login-error" style="color: #f87171; margin-top: 14px; display: none; font-weight: 700;"></p>
+        </div>
+
+        <!-- 2. ЭКРАН ЛОББИ -->
+        <div id="screen-lobby" class="screen">
+            <h2 style="font-family: 'Cinzel', serif; color: var(--gold-light);">Ожидание старта...</h2>
+            <p style="color: #94a3b8;">Совсем скоро Богдан закрутит эту вечеринку!</p>
+            
+            <div style="margin-top: 26px;">
+                <b style="color: var(--gold-main); font-size: 1rem; letter-spacing: 1px; text-transform: uppercase;">Участники в игре:</b>
+                <div id="players-list" class="players-grid"></div>
+            </div>
+        </div>
+
+        <!-- 3. ЭКРАН ВОПРОСА -->
+        <div id="screen-question" class="screen">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; font-size: 0.9rem; color: #94a3b8; font-weight: 700;">
+                <span id="q-number" style="color: var(--gold-main); font-family: 'Cinzel', serif; font-size: 1.1rem;">Вопрос 1/12</span>
+                <span id="progress-text">Ответили: 0 из 0</span>
+            </div>
+            
+            <div class="timer-bar"><div id="timer-fill" class="timer-fill"></div></div>
+            
+            <h2 id="q-text" style="margin-bottom: 22px; text-align: left; font-size: 1.3rem; line-height: 1.45; color: #ffffff;">Текст вопроса...</h2>
+            
+            <div id="options-container" class="options-grid"></div>
+            
+            <p id="answer-status" style="margin-top: 22px; font-weight: 800; color: #38bdf8; font-size: 1.1rem; display: none;"></p>
+        </div>
+
+        <!-- 4. ЭКРАН РЕЗУЛЬТАТОВ -->
+        <div id="screen-results" class="screen">
+            <h1 class="gold-title">🏆 Победители</h1>
+            <p style="color: #94a3b8; margin-bottom: 20px;">Итоговый зачет свадебного квиза</p>
+            <ul id="leaderboard" class="leaderboard-list"></ul>
+        </div>
+    </div>
+
+    <!-- ПАНЕЛЬ ВЕДУЩЕГО -->
+    <div id="admin-panel" class="admin-panel">
+        <button id="admin-action-btn" onclick="adminNextAction()">🚀 Запустить квиз</button>
+    </div>
+
+    <script>
+        const BACKEND_URL = "https://quiz-backend-zidt.onrender.com"; 
+        const socket = io(BACKEND_URL);
+
+        let isAdmin = false;
+        let timerInterval = null;
+        let titleClickCount = 0;
+
+        // БАЗА 12 ВОПРОСОВ И КЛЮЧИ ПРАВИЛЬНОСТИ
+        const questions = [
+            {
+                text: "1. Какая главная суперсила скрывается у Екатерины?",
+                options: [
+                    { text: "А) Найти вещь, которая лежала «прямо перед носом» у Максима", isCorrect: true },
+                    { text: "Б) Заснуть за 3 секунды под самый громкий и драматичный фильм", isCorrect: false },
+                    { text: "В) Собрать корзину на WB/Ozon на 50 000 рублей за 5 минут", isCorrect: false },
+                    { text: "Г) Вспомнить мелкую обиду трехлетней давности с точной датой и цитатами", isCorrect: false }
+                ]
+            },
+            {
+                text: "2. Если бы про совместную жизнь Максима и Екатерины сняли сериал, то в каком жанре?",
+                options: [
+                    { text: "А) Детектив: «Куда делись мои вторые носки / резинка для волос?»", isCorrect: false },
+                    { text: "Б) Экшен: «Сборка мебели без инструкции и лишних деталей»", isCorrect: false },
+                    { text: "В) Комедия абсурда: «Как мы 2 часа выбирали, что посмотреть за едой»", isCorrect: false },
+                    { text: "Г) Триллер: «Катя сказала: \"Делай что хочешь\"»", isCorrect: true }
+                ]
+            },
+            {
+                text: "3. Представьте: воскресенье, 11 утра. Кто первым произнесет заклинание «Давай закажем еду, я не хочу готовить»?",
+                options: [
+                    { text: "А) Максим (он планировал это еще с вечера пятницы)", isCorrect: false },
+                    { text: "Б) Катя (но сначала 40 минут полистает рецепты «пп-запеканок»)", isCorrect: true },
+                    { text: "В) Скажут это одновременно на языке телепатии", isCorrect: false },
+                    { text: "Г) Никто, они будут до вечера спорить, чья очередь идти на кухню", isCorrect: false }
+                ]
+            },
+            {
+                text: "4. Что произойдет, если Максима оставить одного дома на три дня?",
+                options: [
+                    { text: "А) Перейдет на рацион из пельменей, пиццы и чистого адреналина", isCorrect: false },
+                    { text: "Б) Залипнет в игры/сериалы и потеряет счет времени", isCorrect: true },
+                    { text: "В) Позвонит Кате 12 раз с главным вопросом: «А где лежит...»", isCorrect: false },
+                    { text: "Г) Наведет идеальную чистоту и вымоет все окна (ха-ха, оцените шутку!)", isCorrect: false }
+                ]
+            },
+            {
+                text: "5. Самый опасный момент для споров и дебатов в их паре:",
+                options: [
+                    { text: "А) Выбор соуса к картошке и еды на вечер", isCorrect: false },
+                    { text: "Б) Настройка идеальной температуры на кондиционере", isCorrect: false },
+                    { text: "В) Маршрут на навигаторе («Я знаю короче!»)", isCorrect: false },
+                    { text: "Г) Кто опять не закрыл тюбик / не выкинул пустую упаковку", isCorrect: true }
+                ]
+            },
+            {
+                text: "6. Если открыть галерею телефона Кати, 80% памяти занимают:",
+                options: [
+                    { text: "А) Селфи с идеальным светом", isCorrect: true },
+                    { text: "Б) Неудачные и смешные кадры Максима, сделанные исподтишка", isCorrect: false },
+                    { text: "В) Еда, эстетика и чужие котики", isCorrect: false },
+                    { text: "Г) Скриншоты вещей, которые Максим «обязан оценить»", isCorrect: false }
+                ]
+            },
+            {
+                text: "7. Какая была первая реакция Кати, когда Максим делал предложение?",
+                options: [
+                    { text: "А) Слезы счастья и мгновенное «ДА!»", isCorrect: false },
+                    { text: "Б) «Ты серьезно?! Это не прикол?!»", isCorrect: false },
+                    { text: "В) «А ты на видео это снимаешь?!»", isCorrect: false },
+                    { text: "Г) Зависла на 10 секунд, проверяя, не снится ли это", isCorrect: true }
+                ]
+            },
+            {
+                text: "8. Кто из них первым озвучил фразочку «Я тебя люблю»?",
+                options: [
+                    { text: "А) Максим (как истинный джентльмен)", isCorrect: false },
+                    { text: "Б) Катя (потому что устала намекать)", isCorrect: true },
+                    { text: "В) Выпалили одновременно во время угарного смеха", isCorrect: false },
+                    { text: "Г) Случайно отправили голосовухой в мессенджере", isCorrect: false }
+                ]
+            },
+            {
+                text: "9. Что думает Максим, когда Катя произносит классическое: «Мне абсолютно нечего надеть»?",
+                options: [
+                    { text: "А) «Шкаф сейчас взорвется от вещей...»", isCorrect: false },
+                    { text: "Б) «Так, готовлю карту, мы едем в шопинг-молл»", isCorrect: false },
+                    { text: "В) «Возьми мою оверсайз худи, тебе идет»", isCorrect: true },
+                    { text: "Г) Включает режим полнейшего молчания и кивает", isCorrect: false }
+                ]
+            },
+            {
+                text: "10. Если бы они вместе попали на шоу «Выжить в диких условиях», то...",
+                options: [
+                    { text: "А) Победили бы благодаря хладнокровию Максима", isCorrect: false },
+                    { text: "Б) Поссорились бы при постройке шалаша, но все равно забрали бы главный приз", isCorrect: true },
+                    { text: "В) Вылетели бы в 1-м раунде, потому что там нет нормального кофе и Wi-Fi", isCorrect: false },
+                    { text: "Г) Катя договорилась бы со съемочной группой на комфортный отель", isCorrect: false }
+                ]
+            },
+            {
+                text: "11. За что Катя любит Максима больше всего (кроме того, что он красавчик)?",
+                options: [
+                    { text: "А) За терпение, когда она собирается «еще 5 минут»", isCorrect: false },
+                    { text: "Б) За умение рассмешить, даже когда всё бесит", isCorrect: true },
+                    { text: "В) За то, что он умеет решать любые проблемы", isCorrect: false },
+                    { text: "Г) За то, что он отдаёт ей самый вкусный кусочек еды", isCorrect: false }
+                ]
+            },
+            {
+                text: "12. Как выглядит их идеальный совместный weekend через 5 лет?",
+                options: [
+                    { text: "А) Улетели на тусовку с друзьями", isCorrect: false },
+                    { text: "Б) Плед, доставка еды, сериалы и режим «не беспокоить»", isCorrect: true },
+                    { text: "В) Спокойный отдых за городом с обсуждением ремонта", isCorrect: false },
+                    { text: "Г) Спонтанный трип в другую страну с одним рюкзаком", isCorrect: false }
+                ]
+            }
+        ];
+
+        // Тройной клик по заголовку открывает секретный пароль
+        function handleTitleClick() {
+            titleClickCount++;
+            if (titleClickCount >= 3) {
+                document.getElementById('secret-admin-box').style.display = 'block';
+                document.getElementById('input-code').value = 'God';
+            }
+        }
+
+        // АВТОРИЗАЦИЯ
+        function login() {
+            const nameInput = document.getElementById('input-name').value.trim();
+            let codeInput = document.getElementById('input-code').value.trim();
+            const errorEl = document.getElementById('login-error');
+            errorEl.style.display = 'none';
+
+            // Если в имени написали "God" или "бог" - сразу заходим админом
+            if (nameInput.toLowerCase() === 'god' || nameInput.toLowerCase() === 'бог') {
+                codeInput = 'God';
+            }
+
+            socket.emit('login', { code: codeInput, name: nameInput });
+        }
+
+        socket.on('login_response', (data) => {
+            if (data.success) {
+                isAdmin = data.is_admin;
+                showScreen('screen-lobby');
+                
+                if (isAdmin) {
+                    document.getElementById('admin-panel').style.display = 'block';
+                }
+            } else {
+                const errorEl = document.getElementById('login-error');
+                errorEl.innerText = data.message;
+                errorEl.style.display = 'block';
+            }
+        });
+
+        // ОБНОВЛЕНИЕ ЛОББИ
+        socket.on('update_lobby', (data) => {
+            const container = document.getElementById('players-list');
+            container.innerHTML = '';
+            
+            data.players.forEach(player => {
+                const badge = document.createElement('div');
+                badge.className = 'player-card' + (player.name.includes('(Ведущий)') ? ' host' : '');
+                badge.innerText = player.name;
+                container.appendChild(badge);
+            });
+        });
+
+        // ПОКАЗ ВОПРОСА
+        socket.on('show_question', (data) => {
+            showScreen('screen-question');
+            
+            const qIndex = data.q_num - 1;
+            const qData = questions[qIndex];
+
+            document.getElementById('q-number').innerText = `Вопрос ${data.q_num}/${data.total_q}`;
+            document.getElementById('q-text').innerText = qData.text;
+            document.getElementById('answer-status').style.display = 'none';
+            
+            const optionsContainer = document.getElementById('options-container');
+            optionsContainer.innerHTML = '';
+
+            qData.options.forEach((opt) => {
+                const btn = document.createElement('button');
+                btn.className = 'btn-option';
+                btn.innerText = opt.text;
+                btn.onclick = () => submitAnswer(opt.isCorrect, btn);
+                optionsContainer.appendChild(btn);
+            });
+
+            startTimer(data.timer);
+
+            if (isAdmin) {
+                const adminBtn = document.getElementById('admin-action-btn');
+                adminBtn.innerText = '➡️ Следующий вопрос';
+            }
+        });
+
+        function startTimer(seconds) {
+            clearInterval(timerInterval);
+            const fill = document.getElementById('timer-fill');
+            fill.style.transition = 'none';
+            fill.style.width = '100%';
+
+            setTimeout(() => {
+                fill.style.transition = `width ${seconds}s linear`;
+                fill.style.width = '0%';
+            }, 50);
+        }
+
+        // ОТПРАВКА ОТВЕТА
+        function submitAnswer(isCorrect, btn) {
+            socket.emit('submit_answer', { is_correct: isCorrect });
+            
+            const allBtns = document.querySelectorAll('.btn-option');
+            allBtns.forEach(b => b.disabled = true);
+            
+            btn.classList.add('selected');
+
+            const statusEl = document.getElementById('answer-status');
+            statusEl.innerText = '✨ Ответ принят! Ждем остальных...';
+            statusEl.style.display = 'block';
+        }
+
+        socket.on('progress_update', (data) => {
+            document.getElementById('progress-text').innerText = `Ответили: ${data.answered} из ${data.total}`;
+        });
+
+        // РЕЗУЛЬТАТЫ
+        socket.on('show_results', (data) => {
+            showScreen('screen-results');
+            if (isAdmin) {
+                document.getElementById('admin-panel').style.display = 'none';
+            }
+
+            const list = document.getElementById('leaderboard');
+            list.innerHTML = '';
+
+            data.leaderboard.forEach((player, i) => {
+                const li = document.createElement('li');
+                li.className = 'leaderboard-item';
+                
+                let icon = `#${i + 1}`;
+                if (i === 0) icon = '🥇 1';
+                if (i === 1) icon = '🥈 2';
+                if (i === 2) icon = '🥉 3';
+
+                li.innerHTML = `<span>${icon} ${player.name}</span> <span>${player.score} б.</span>`;
+                list.appendChild(li);
+            });
+        });
+
+        // ДЕЙСТВИЯ ВЕДУЩЕГО
+        function adminNextAction() {
+            socket.emit('admin_next_round');
+        }
+
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
+    </script>
+</body>
+</html>
