@@ -225,7 +225,6 @@
             box-shadow: 0 4px 15px var(--gold-glow);
         }
 
-        /* Отображение всех участников */
         .players-grid {
             display: flex;
             flex-wrap: wrap;
@@ -367,29 +366,45 @@
 
         .admin-panel {
             position: fixed;
-            bottom: 24px;
+            bottom: 20px;
             left: 50%;
             transform: translate3d(-50%, 0, 0);
-            background: rgba(3, 7, 18, 0.9);
+            background: rgba(3, 7, 18, 0.92);
             backdrop-filter: blur(25px);
             border: 1px solid var(--gold-main);
-            padding: 12px 24px;
+            padding: 10px 18px;
             border-radius: 40px;
             box-shadow: 0 20px 40px rgba(0,0,0,0.8), 0 0 30px var(--gold-glow);
             display: none;
             z-index: 1000;
+            white-space: nowrap;
         }
 
         .admin-panel button {
+            border: none;
+            padding: 12px 22px;
+            border-radius: 30px;
+            font-size: 0.95rem;
+            font-weight: 800;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .admin-panel button.btn-next {
             background: linear-gradient(135deg, var(--gold-light), var(--gold-main));
             color: #030712;
-            font-weight: 800;
-            border: none;
-            padding: 12px 30px;
-            border-radius: 30px;
-            font-size: 1.05rem;
-            cursor: pointer;
             box-shadow: 0 6px 20px var(--gold-glow);
+            margin-right: 8px;
+        }
+
+        .admin-panel button.btn-danger {
+            background: linear-gradient(135deg, #ef4444, #991b1b);
+            color: #ffffff;
+            box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+        }
+
+        .admin-panel button:active {
+            transform: scale(0.95);
         }
 
         .secret-admin-modal {
@@ -471,11 +486,25 @@
             <p style="color: #94a3b8; margin-bottom: 20px;">Итоговый зачет свадебного квиза</p>
             <ul id="leaderboard" class="leaderboard-list"></ul>
         </div>
+
+        <!-- 5. ЭКРАН ФИНАЛЬНОГО ПРОЩАНИЯ И ОБЪЯВЛЕНИЯ ПОБЕДИТЕЛЯ -->
+        <div id="screen-thanks" class="screen">
+            <h1 class="gold-title">✨ Спасибо за участие!</h1>
+            <p style="color: var(--gold-light); font-size: 1.2rem; font-weight: 700; margin-top: 20px; line-height: 1.5;">
+                Теперь мы знаем, кто лучше всех знает нашу пару:<br>
+                <span id="winner-display-name" style="font-size: 1.8rem; color: #ffffff; text-shadow: 0 0 20px var(--gold-glow); font-family: 'Cinzel', serif; display: inline-block; margin-top: 8px;">...</span> 👑
+            </p>
+            <p style="color: #94a3b8; font-size: 0.95rem; margin-top: 24px; line-height: 1.6;">
+                Игра официально завершена.<br>
+                Поздравляем молодоженов и всех гостей! 🥂🎉
+            </p>
+        </div>
     </div>
 
     <!-- ПАНЕЛЬ ВЕДУЩЕГО -->
     <div id="admin-panel" class="admin-panel">
-        <button id="admin-action-btn" onclick="adminNextAction()">🚀 Запустить квиз</button>
+        <button id="admin-action-btn" class="btn-next" onclick="adminNextAction()">🚀 Запустить квиз</button>
+        <button class="btn-danger" onclick="adminEndSession()">🛑 Завершить</button>
     </div>
 
     <script>
@@ -708,7 +737,8 @@
         socket.on('show_results', (data) => {
             showScreen('screen-results');
             if (isAdmin) {
-                document.getElementById('admin-panel').style.display = 'none';
+                document.getElementById('admin-panel').style.display = 'block';
+                document.getElementById('admin-action-btn').style.display = 'none';
             }
 
             const list = document.getElementById('leaderboard');
@@ -731,6 +761,21 @@
         function adminNextAction() {
             socket.emit('admin_next_round');
         }
+
+        function adminEndSession() {
+            if (confirm("Вы уверены, что хотите завершить сессию и вывести имена победителей у всех гостeй?")) {
+                socket.emit('admin_end_session');
+            }
+        }
+
+        socket.on('session_ended', (data) => {
+            const winner = data && data.winner_name ? data.winner_name : "Все участники";
+            document.getElementById('winner-display-name').innerText = winner;
+            
+            showScreen('screen-thanks');
+            document.getElementById('admin-panel').style.display = 'none';
+            socket.disconnect();
+        });
 
         function showScreen(screenId) {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
